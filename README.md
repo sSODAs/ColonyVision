@@ -51,3 +51,17 @@ python .\src\train.py --epochs 50 --imgsz 512 --batch 2 --name baseline
 Do not commit original photos, `.venv`, weights, annotations, or results to GitHub by default. See `.gitignore`.
 
 Windows Application Control allowed Torch 2.10.0 CUDA 12.8 but blocked OpenCV DLL import in the last test. Plate ROI preview deliberately avoids OpenCV.
+
+## Pilot annotation batch (2026-11-18)
+
+- `src/annotation/select_pilot.py` selects 24 images reproducibly across filename species hints and count-hint ranges (8 per hint). All filenames/count hints are **unverified**.
+- `annotations/metadata/pilot_24_manifest.csv` records selected filenames and review status; private and gitignored.
+- `raw/pilot_review/` holds **copies** of 24 original photos for external labeling; all 1,252 originals remain unchanged at `raw/unlabeled/Petri_plates/`.
+- `outputs/pilot_plate_roi/overlays/` and `outputs/pilot_plate_roi/crops/` hold plate localization **previews**, not validated crops.
+- `outputs/pilot_plate_roi/plate_roi_metadata.csv` contains candidate circle and crop offsets for mapping predictions to the original images. Status `estimated_not_verified` means visually inspect before proceeding.
+
+### Suggested external annotation trial
+1. Start with WeCFU (https://github.com/WeStrainGroup/WeCFU): count/marker suggestions with manual correction; export its per-image JSON and CSV. Marker coordinates are **points, not measured bounding boxes**, so do not silently convert them to ground-truth boxes.
+2. Alternative investigation: Colony Grounded SAM2 (https://huggingface.co/DataScienceWFSR/ColonyGroundedSAM2); check original repository, runtime needs, and license of training data before using its checkpoint.
+3. Do not train on predictions until individual colonies, fused colonies, plate-edge reflections, and missed detections are reviewed. Save external output in `annotations/pseudo_labels/` and final inspected labels in `annotations/reviewed/`.
+4. Dataset images and labels in `dataset/` remain empty until reviewed labels are ready. Group repeated photos of the same plate/session in one split.
