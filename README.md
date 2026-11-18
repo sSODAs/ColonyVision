@@ -69,3 +69,56 @@ Tiled inference outputs `outputs/predict/adbc_tiled_preview/` with:
 - Original photos, external data, generated labels, checkpoints and predictions are ignored by Git.
 - WeCFU was removed from the project, its stand-alone Desktop installation and its downloaded runtime. No WeCFU predictions are included in the ADBC training pipeline.
 - See `raw/external/ADBC/source_metadata.json` and `dataset/adbc_full/SOURCE_AND_LICENSE.txt` for provenance.
+
+## Experimental Circular ROI training (2026-11-18)
+
+**Keep the in-progress ADBC baseline training intact.** Do not modify its tiles
+(`dataset/adbc_full`) or restart its active training process.
+
+Rationale: only plate interior should influence colony detection; avoid shadows,
+glare, background and table objects outside the Petri dish.
+
+- ADBC image-only ROI research audit:
+  `src/dataset/audit_circular_roi.py` checks 369 images and reports to
+  `outputs/roi_circle_audit/audit.csv`.
+  The old brightness-threshold estimator returned a circle for 154/369 images.
+  OpenCV Hough returned circles for 369/369 images **as hypotheses**, not
+  manually verified geometries. At radius 1.02 times Hough radius,
+  60/56,865 official annotation centers were outside on 6 source images.
+- New `src/preprocessing/plate_hough.py` estimates candidate circles with
+  OpenCV Hough on image pixels alone. It is tested on ADBC images, **not yet
+  reliable on all 1,252 user images**; one real phone photo did not yield a circle.
+- `src/dataset/build_adbc_circular.py` generates **new training tiles only**
+  into `dataset/adbc_circular/` without changing the baseline. It masks the
+  exterior of confidently estimated circles to black with a 3.5% radial
+  safety margin; image and label coordinates remain unchanged. If the circle
+  cannot be found or could cover any official GT box corner, that training
+  image remains unmasked, and its fallback reason is recorded in
+  `roi_audit.csv`. This avoids silently deleting true annotated colonies.
+  The Validation and Test paths continue to use the same **unmodified**
+  ADBC baseline data for fair cross-run comparison.
+- The current prediction script `src/predict_tiled.py` can use
+  `--circular-mask --strict-roi` to mask the exterior before YOLO, and skip
+  instead of reporting count=0 if plate localization fails. Its real-photo
+  plate estimator still uses the previous brightness-based algorithm,
+  which must be evaluated separately.
+
+Commands for a **separate experimental run after baseline finishes**:
+
+```powershell
+cd "C:\Users\user\Desktop\ColonyVision"
+
+# Prepare circular ROI training data (separate dataset, safe to regenerate under a new name)
+.\.venv\Scripts\python.exe src\dataset\build_adbc_circular.py --name adbc_circular
+
+# Compare to the same validation and test splits (run separately from existing training)
+.\.venv\Scripts\python.exe src\train.py --data dataset\adbc_circular\data.yaml --epochs 40 --imgsz 640 --batch 2 --name adbc_yolo11n_roi
+
+# Infer using ROI mask; preview 12 images, never promotes predictions to ground truth
+.\.venv\Scripts\python.exe src\predict_tiled.py --model outputs\train\adbc_yolo11n_roi\weights\best.pt --circular-mask --strict-roi --limit 12 --name adbc_roi_preview
+```
+
+Note: The ROI experiment may increase or decrease accuracy. Compare Precision,
+Recall, mAP and actual counting error on fixed, independently annotated test
+images before treating the hypothesis as successful. Inference localization
+for real patient/user photos remains to be independently verified.

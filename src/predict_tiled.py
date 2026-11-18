@@ -65,9 +65,13 @@ def main():
     p.add_argument("--limit",type=int,default=12,help="0 means all source images")
     p.add_argument("--plate-inset",type=float,default=0.96,help="Retain detections within this fraction of estimated plate radius")
     p.add_argument("--no-plate-filter",action="store_true",help="Disable estimated circular plate filtering")
+    p.add_argument("--circular-mask",action="store_true",help="Set pixels outside estimated dish to black before YOLO")
+    p.add_argument("--strict-roi",action="store_true",help="If dish localization fails, skip counting (do not return misleading zero)")
     args=p.parse_args()
     if not args.model.is_file():raise SystemExit("Checkpoint missing: "+str(args.model))
     if not 0<args.stride<=args.tile:raise SystemExit("0 < stride <= tile is required")
+    if args.no_plate_filter and (args.circular_mask or args.strict_roi):
+        raise SystemExit("--no-plate-filter conflicts with --circular-mask or --strict-roi")
     if args.source.is_file():
         files=[args.source]
     else:
@@ -84,6 +88,14 @@ def main():
         with Image.open(path) as image:
             upright=ImageOps.exif_transpose(image).convert("RGB")
         plate,plate_status=estimate_plate(upright) if not args.no_plate_filter else (None,"filter_disabled")
+        if plate is None and args.strict_roi:
+            failed={"source":path.name,"status":"roi_not_found_no_prediction",
+                    "plate_status":plate_status,"count":None,"boxes_xyxy_conf":[]}
+            (out/"detections"/(path.name+".json")).write_text(
+                json.dumps(failed,indent=2),encoding="utf-8")
+            rows.append([path.name,"",""])
+            print(f"[{n}/{len(files)}] {path.name}: ROI not found; SKIPPED (not zero colonies)",flush=True)
+            continue
         if plate is not None:
             cx,cy,r,_,_=plate
             roi_size=1.06*r
@@ -93,6 +105,13 @@ def main():
         else:
             working=upright
             xlo=ylo=0
+        if args.circular_mask and plate is not None:
+            # Same safety-margin convention as the ADBC circular train variant.
+            localx=cx-xlo;localy=cy-ylo
+            mr=r*1.035
+            mask=Image.new("L",working.size,0)
+            ImageDraw.Draw(mask).ellipse((localx-mr,localy-mr,localx+mr,localy+mr),fill=255)
+            working=Image.composite(working,Image.new("RGB",working.size,(0,0,0)),mask)
         candidates,raw=infer(model,working,args.tile,args.stride,args.conf,args.imgsz,args.iou,device)
         detections=[]
         for x0,y0,x1,y1,score in candidates:
@@ -115,6 +134,7 @@ def main():
                 "plate_status":plate_status,
                 "plate_estimate":list(plate[:3]) if plate is not None else None,
                 "plate_inset":args.plate_inset if plate is not None else None,
+                "circular_mask_applied":bool(args.circular_mask and plate is not None),
                 "boxes_xyxy_conf":detections,"count":len(detections)}
         (out/"detections"/(path.name+".json")).write_text(
             json.dumps(record,indent=2),encoding="utf-8")

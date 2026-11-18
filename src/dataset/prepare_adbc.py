@@ -4,7 +4,7 @@ Source: https://doi.org/10.6084/m9.figshare.22022540.v3 (CC BY 4.0).
 import argparse, csv, hashlib, json, random, time, urllib.request, zipfile
 from concurrent.futures import ThreadPoolExecutor,as_completed
 from pathlib import Path
-from PIL import Image,ImageOps
+from PIL import Image,ImageOps,ImageDraw
 
 ROOT=Path(__file__).resolve().parents[2]
 CACHE=ROOT/"raw"/"external"/"ADBC"
@@ -59,13 +59,19 @@ def get_boxes(z,name,w,h):
         boxes.append(((x-bw/2)*w,(y-bh/2)*h,(x+bw/2)*w,(y+bh/2)*h))
     return boxes
 
-def make_tiles(path,z,split,out,tile,stride):
+def make_tiles(path,z,split,out,tile,stride,roi_circle=None):
     with Image.open(path) as raw:
         # The official YOLO coordinates refer to the EXIF-corrected visual orientation.
         # Verified on sp14/sp19/sp21 examples with orientation=6.
         image=ImageOps.exif_transpose(raw).convert("RGB")
     w,h=image.size
     boxes=get_boxes(z,path.name,w,h)
+    if roi_circle is not None:
+        # Circular-mask experiment. Do not change dimensions or box coordinates.
+        cx,cy,r=roi_circle
+        mask=Image.new("L",(w,h),0)
+        ImageDraw.Draw(mask).ellipse((cx-r,cy-r,cx+r,cy+r),fill=255)
+        image=Image.composite(image,Image.new("RGB",(w,h),(0,0,0)),mask)
     n=0
     for top in positions(h,tile,stride):
         for left in positions(w,tile,stride):
