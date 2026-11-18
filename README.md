@@ -36,9 +36,10 @@ python .\src\train.py --epochs 50 --imgsz 512 --batch 2 --name baseline
 2. Try an existing colony model on ~10-20 representative images first.
 3. Export individual **bounding boxes in original pixel coordinates**, not just per-image counts.
 4. Save output as *candidate* pseudo-labels under `annotations/pseudo_labels/`.
-5. Human-review missed colonies, duplicates, artifacts, confluency, and colony size.
-6. Put only reviewed box labels and corresponding images into grouped train/val/test splits.
-7. Keep photos of the same original Petri dish/session together in the same split.
+5. Convert external CSV boxes using `python src/annotation/import_boxes_csv.py --csv <external_boxes.csv>`. For boxes predicted on plate crops, add `--crop-metadata outputs/plate_roi_preview/plate_roi_metadata.csv` to map coordinates back to original images.
+6. Human-review missed colonies, duplicates, artifacts, confluency, and colony size.
+7. Put only reviewed box labels and corresponding images into grouped train/val/test splits.
+8. Keep photos of the same original Petri dish/session together in the same split.
 
 **Recommended model probes:**
 - WeCFU: convenient human-in-the-loop marker/counter and review tool; marker circles are not measured bounding boxes.

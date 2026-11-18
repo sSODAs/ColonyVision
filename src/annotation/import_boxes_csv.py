@@ -21,9 +21,17 @@ def main():
     parser.add_argument("--images", type=Path, default=SOURCE)
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--min-conf", type=float, default=0.0)
+    parser.add_argument("--crop-metadata", type=Path,
+        help="plate_roi_metadata.csv when model predictions use plate crops")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
+    offsets = {}
+    if args.crop_metadata:
+        with args.crop_metadata.open("r", encoding="utf-8-sig", newline="") as f:
+            offsets = {r["image"]: (float(r["crop_left"]), float(r["crop_top"]))
+                       for r in csv.DictReader(f)
+                       if r.get("crop_left") and r.get("crop_top")}
     image_index = {p.name: p for p in args.images.iterdir() if p.is_file()}
     boxes = defaultdict(list)
     rejected = []
@@ -40,6 +48,11 @@ def main():
             try:
                 confidence = float(row.get("confidence") or 1)
                 xyxy = tuple(float(row[k]) for k in ("x_min", "y_min", "x_max", "y_max"))
+                if args.crop_metadata:
+                    if name not in offsets:
+                        raise ValueError("image missing crop offset metadata")
+                    ox, oy = offsets[name]
+                    xyxy = (xyxy[0]+ox, xyxy[1]+oy, xyxy[2]+ox, xyxy[3]+oy)
                 if not all(math.isfinite(x) for x in (*xyxy, confidence)):
                     raise ValueError("non-finite value")
                 if confidence < args.min_conf:
