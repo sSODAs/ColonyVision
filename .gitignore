@@ -9,6 +9,8 @@ __pycache__/
 raw/
 dataset/images/
 dataset/labels/
+dataset/adbc_*/
+# Raw and generated data including checkpoint caches remain local
 
 # Annotation drafts and inventory of private filenames
 annotations/
