@@ -122,3 +122,38 @@ Note: The ROI experiment may increase or decrease accuracy. Compare Precision,
 Recall, mAP and actual counting error on fixed, independently annotated test
 images before treating the hypothesis as successful. Inference localization
 for real patient/user photos remains to be independently verified.
+
+## GitHub upload policy — code and configuration only
+
+The Git repository is configured to **exclude all private/raw images,
+downloaded ADBC data, generated YOLO labels/tiles, annotations, Python
+virtual environments, all downloaded pretrained model files, trained weights,
+checkpoints, and training/inference outputs**. These files remain on the
+local computer and are **not** removed by `.gitignore`.
+
+Publishable files include source code (`src/`), this README, scripts,
+Git hooks, and the one-class YOLO template `dataset/data.yaml`.
+
+Security controls:
+- `.gitignore` automatically ignores data, model artifacts, and secrets.
+- `scripts/check_git_payload.py` audits tracked/staged paths, historical
+  commit paths, and oversized blobs.
+- Local hooks `.githooks/pre-commit` and `.githooks/pre-push` refuse
+  unsafe uploads (including accidental `git add -f`).
+- Git hooks are enabled on this computer through
+  `git config --local core.hooksPath .githooks`. In a **new clone**,
+  explicitly run the same command again, as Git does not enable
+  repository-provided hooks automatically.
+
+Check the file list before publishing:
+
+```powershell
+cd "C:\Users\user\Desktop\ColonyVision"
+.\.venv\Scripts\python.exe scripts\check_git_payload.py
+git ls-files
+git status --short
+```
+
+There is no GitHub remote configured yet; these settings alone do not
+upload anything to GitHub. Keep future model weights and training datasets
+outside the repository history even when exporting to new filenames.

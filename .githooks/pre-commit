@@ -1,0 +1,14 @@
+#!/bin/sh
+# Run the repository's privacy/model-file audit before committing or pushing.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+if command -v py >/dev/null 2>&1 && py -3.11 -c "import sys" >/dev/null 2>&1; then
+  exec py -3.11 scripts/check_git_payload.py
+elif command -v python3 >/dev/null 2>&1; then
+  exec python3 scripts/check_git_payload.py
+elif command -v python >/dev/null 2>&1; then
+  exec python scripts/check_git_payload.py
+else
+  echo "[BLOCKED] Python 3 is required for Git payload audit." >&2
+  exit 1
+fi

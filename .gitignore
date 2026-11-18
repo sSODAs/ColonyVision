@@ -1,30 +1,110 @@
-# Python environment and caches
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.env
+# ColonyVision: share source code and reproducible configuration only.
+# All original photographs, external datasets, trained/downloaded models,
+# checkpoint files and generated outputs must stay on this computer.
 
-# Images and imported datasets (do not publish source photos)
-raw/
-dataset/images/
-dataset/labels/
-dataset/adbc_*/
-# Raw and generated data including checkpoint caches remain local
+# ----- PRIVATE DATA / DERIVED DATA -----
+/raw/
+/annotations/
+/dataset/*
+!/dataset/data.yaml
+/outputs/
+/weights/
+/runs/
+/results/
+/predictions/
+/checkpoints/
+/artifacts/
+/data/
+/datasets/
 
-# Annotation drafts and inventory of private filenames
-annotations/
-
-# Outputs, trained weights and other large binary artifacts
-outputs/
-weights/
-runs/
+# ----- MODEL WEIGHTS / EXPORTS / LARGE SERIALIZED DATA -----
 *.pt
 *.pth
-*.onnx
+*.ptl
+*.ckpt
 *.safetensors
+*.onnx
+*.engine
+*.tflite
+*.pb
+*.h5
+*.hdf5
+*.keras
+*.mlmodel
+*.caffemodel
+*.weights
+*.torchscript
+*.pkl
+*.pickle
+*.joblib
+*.npy
+*.npz
+*.bin
+*.gguf
+*.model
 
-# Editor / OS
+# ----- IMAGE / VIDEO / AUDIO / DATASETS / ARCHIVES -----
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tif
+*.tiff
+*.webp
+*.gif
+*.dcm
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.mp3
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.arrow
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.zst
+
+# ----- PYTHON / TOOL CACHE -----
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.tox/
+.nox/
+.cache/
+.uv/
+build/
+dist/
+*.log
+*.tmp
+*.part
+
+# ----- SECRETS / LOCAL MACHINE SETTINGS -----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
 .vscode/
+.idea/
 .DS_Store
 Thumbs.db
+desktop.ini
