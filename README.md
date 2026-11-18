@@ -65,3 +65,29 @@ Windows Application Control allowed Torch 2.10.0 CUDA 12.8 but blocked OpenCV DL
 2. Alternative investigation: Colony Grounded SAM2 (https://huggingface.co/DataScienceWFSR/ColonyGroundedSAM2); check original repository, runtime needs, and license of training data before using its checkpoint.
 3. Do not train on predictions until individual colonies, fused colonies, plate-edge reflections, and missed detections are reviewed. Save external output in `annotations/pseudo_labels/` and final inspected labels in `annotations/reviewed/`.
 4. Dataset images and labels in `dataset/` remain empty until reviewed labels are ready. Group repeated photos of the same plate/session in one split.
+
+## Automated WeCFU Ultra pilot (2026-11-18)
+
+Use the **separate installed** WeCFU 1.2.4 server on http://127.0.0.1:8765.
+The server must have `Ultra is ready` and uses CPU on Windows.
+
+```powershell
+cd C:\Users\user\Desktop\ColonyVision
+.\.venv\Scripts\python.exe .\src\annotation\prepare_wecfu_inputs.py
+.\.venv\Scripts\python.exe .\src\annotation\wecfu_ultra_batch.py --source raw\wecfu_ready --batch colonyvision_ultra_upright
+```
+
+**Do not run the second command again for this pilot unless intentionally continuing the trial:** upright copies were already generated. The preparation script refuses to overwrite existing copies, and the batch script skips already counted images. To test a single image, specify `--limit 1`.
+
+Inputs: `raw/wecfu_ready/` (24 EXIF-normalized derived JPEGs; original 1,252 files untouched).
+Output: `annotations/pseudo_labels/wecfu_ultra/wecfu_ultra_export.zip` and `ultra_run_report.csv`.
+WeCFU saved-state workspace: `annotations/wecfu_workspace/`.
+
+**Probe findings, not ground truth:** WeCFU Ultra returned 0 markers on
+`IMG_7741ecoli_T6_10^-7_291.jpg`, and 1 marker on
+`IMG_8684ecoli_dplaca_10^-6_42.jpg`. The filename count tokens are unverified;
+however, the images visibly show more colonies than the predictions.
+Classical CLI returned 0 for the latter image.
+Therefore the WeCFU method is **not admitted for bulk pseudo-label creation** at present.
+Do not place these candidate markers in dataset/labels/train, val or test.
+Review overlay quality and evaluate other pre-annotation methods first.
