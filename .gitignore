@@ -1,0 +1,28 @@
+# Python environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+
+# Images and imported datasets (do not publish source photos)
+raw/
+dataset/images/
+dataset/labels/
+
+# Annotation drafts and inventory of private filenames
+annotations/
+
+# Outputs, trained weights and other large binary artifacts
+outputs/
+weights/
+runs/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
