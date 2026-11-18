@@ -91,3 +91,47 @@ Classical CLI returned 0 for the latter image.
 Therefore the WeCFU method is **not admitted for bulk pseudo-label creation** at present.
 Do not place these candidate markers in dataset/labels/train, val or test.
 Review overlay quality and evaluate other pre-annotation methods first.
+
+## Human-approved YOLO annotation workflow
+
+WeCFU markers are **candidate centers** and the imported radius is only a visual radius.
+The 24 pilot images in `raw/wecfu_ready/` have been EXIF-normalized; do not use the original
+unrotated JPEG coordinates to interpret them.
+
+Open the review GUI (Windows):
+
+```powershell
+.\.venv\Scripts\python.exe .\src\annotation\review_colonies.py
+```
+
+Or double-click `run_colony_review.cmd`.
+
+- `Add`: click to add a box using the chosen radius, or drag a rectangle manually.
+- `Move`: drag an existing rectangle.
+- `Resize`: drag from an existing rectangle toward its nearest corner.
+- `Delete`: click an existing box; right-click deletes regardless of selected mode.
+- Zoom using buttons/mouse wheel, scrollbars for panning.
+- `Save draft`: preserves work under `annotations/review_drafts/`; NEVER used for training.
+- `Approve reviewed`: **only after human visual verification**, writes `annotations/reviewed/colony/{image}.json` and `{image}.txt` (YOLO format). Approving a zero-colony plate is allowed only when verified.
+- A newer draft invalidates any older approval until the user approves again.
+- All original photos remain untouched. Generated/derived photos and labels are gitignored.
+
+After at least some images are fully reviewed, initialize the split plan:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\annotation\build_reviewed_dataset.py --init-plan
+```
+
+Edit `annotations/metadata/reviewed_splits.csv`, assigning `split` (train/val/test)
+and `plate_group` (same ID for photos from the same physical Petri dish/session).
+Run `--init-plan` again whenever new reviewed photos are added; existing entries stay.
+Once there are reviewed images in **both train and val**, build the dataset:
+
+```powershell
+.\.venv\Scripts\python.exe .\src\annotation\build_reviewed_dataset.py --build
+.\.venv\Scripts\python.exe .\src\validate_dataset.py
+```
+
+The builder validates source image hashes, YOLO box contents, manual approval and
+plate-group split isolation. It refuses to overwrite conflicting dataset files.
+Do not train until there is sufficient verified data for meaningful validation.
