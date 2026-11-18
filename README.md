@@ -135,3 +135,24 @@ Once there are reviewed images in **both train and val**, build the dataset:
 The builder validates source image hashes, YOLO box contents, manual approval and
 plate-group split isolation. It refuses to overwrite conflicting dataset files.
 Do not train until there is sufficient verified data for meaningful validation.
+
+## Visual preview for existing WeCFU Ultra results
+
+The existing `wecfu_ultra_export.zip` already contains per-image JSON marker coordinates and count values. To inspect without rerunning inference:
+
+```powershell
+cd C:\Users\user\Desktop\ColonyVision
+.\.venv\Scripts\python.exe src\annotation\preview_wecfu.py
+start .\outputs\wecfu_ultra_preview\index.html
+```
+
+Or double-click `open_wecfu_preview.cmd` to regenerate and open the HTML gallery.
+
+Generated artifacts (24 images):
+- `outputs/wecfu_ultra_preview/index.html` -- clickable image gallery with counts
+- `outputs/wecfu_ultra_preview/overview.jpg` -- single contact sheet of all 24 images
+- `outputs/wecfu_ultra_preview/overlays/*.jpg` -- full-resolution images with exact WeCFU circle/center markers
+- `outputs/wecfu_ultra_preview/comparisons/*.jpg` -- original next to marked image
+- `outputs/wecfu_ultra_preview/preview_counts.csv` -- count table
+
+**Important:** yellow circles show model-provided center and radius; they are not human-verified bounding boxes. Their absence on a visible colony is a false negative candidate. The filename count token is only a hint, not validated ground truth. This visualization does not change inputs, annotations or model results.
