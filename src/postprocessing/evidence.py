@@ -6,7 +6,7 @@ import math
 import cv2
 import numpy as np
 
-from predict_tiled import e3_radial
+from detection import e3_radial
 
 def _clip_box(box, width, height):
     x1, y1, x2, y2 = map(float, box)

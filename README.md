@@ -54,15 +54,17 @@ ColonyVision/
 ├─ raw/
 │  └─ test50/                     # exactly 50 frozen test photographs (Git LFS)
 ├─ src/
-│  ├─ pipeline.py
-│  ├─ predict_tiled.py
-│  ├─ prepare_plate_images.py
-│  ├─ colony_evidence.py
-│  ├─ lobe_graph_resolver.py
-│  ├─ seeded_connected_resolver.py
-│  └─ preprocessing/
-│     ├─ plate_hough.py
-│     └─ plate_roi.py
+│  ├─ pipeline.py                 # full Test50 workflow + model pipeline
+│  ├─ detection.py                # tiled YOLO detection + refinement
+│  ├─ visualization.py            # final result, step sheet, graphs
+│  ├─ evaluation.py               # metrics and evaluation graphs
+│  ├─ preprocessing/
+│  │  └─ plate.py                 # plate detection, crop, CLAHE
+│  └─ postprocessing/
+│     ├─ evidence.py              # image evidence helpers
+│     ├─ touching.py              # touching-colony / lobe resolution
+│     ├─ connected.py             # seeded-connected resolution
+│     └─ nested.py                # final nested-box re-check
 ├─ weights/
 │  └─ colonyvision_student_v1.pt  # Git LFS
 ├─ output/                         # generated locally; ignored by Git
@@ -70,8 +72,6 @@ ColonyVision/
 ├─ requirements.txt
 └─ README.md
 ```
-
-The large historical `resolve_e3.py` module was removed. The small subset of image-evidence functions still required by the current pipeline now lives in `src/colony_evidence.py`.
 
 ## Setup
 
@@ -107,7 +107,7 @@ output/Test50_Final/
 
 Each `Txxx` folder contains:
 
-- `Txxx_01_final_result.jpg` — cropped dish, orange ROI, rectangular detections, small numbered black tags.
+- `Txxx_01_final_result.jpg` — cropped dish with rectangular detections, compact numbered tags, and the final colony count. The counting ROI is intentionally hidden in this final view.
 - `Txxx_02_steps.jpg` — AST-style white-background step-by-step pipeline sheet.
 - `Txxx_03_pipeline_graph.png` — detection counts across pipeline stages.
 - `Txxx_04_measured.json` — final colony coordinates and count.

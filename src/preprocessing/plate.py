@@ -1,21 +1,51 @@
-"""Petri-dish circle estimation using scored Hough candidates.
-
-Adapted for ColonyVision from the dish-crop strategy used in the local AST-MEASURE
-project: candidate circles are not accepted by center/radius prior alone. The rim
-must have gradient support around the circumference and across all quadrants.
-"""
 from __future__ import annotations
 
+"""Petri-dish detection, crop, and image preprocessing used by ColonyVision."""
+
 import math
+
 import cv2
+
 import numpy as np
+
 from PIL import Image
 
+def estimate_plate(image):
+    thumb = image.copy()
+    thumb.thumbnail((512, 512), Image.Resampling.BILINEAR)
+    gray = np.asarray(thumb.convert("L"), dtype=np.uint8)
+    h, w = gray.shape
+    border = np.concatenate((
+        gray[: max(3, h // 20), :].ravel(),
+        gray[-max(3, h // 20):, :].ravel(),
+        gray[:, : max(3, w // 20)].ravel(),
+        gray[:, -max(3, w // 20):].ravel(),
+    ))
+    threshold = max(35, int(np.median(border)) + 25)
+    ys, xs = np.where(gray >= threshold)
+    coverage = len(xs) / float(w * h)
+    if not (0.12 <= coverage <= 0.78):
+        return None, f"invalid_coverage_{coverage:.3f}"
+    xlo, xhi = np.percentile(xs, [1, 99])
+    ylo, yhi = np.percentile(ys, [1, 99])
+    width = xhi - xlo
+    height = yhi - ylo
+    if not (0.75 <= width / max(1, height) <= 1.33):
+        return None, "bad_aspect_ratio"
+    cx, cy = (xlo + xhi) / 2, (ylo + yhi) / 2
+    radius = (width + height) / 4
+    if radius < 30:
+        return None, "radius_too_small"
+    scale_x, scale_y = image.width / w, image.height / h
+    # The short side of a mildly elliptical plate keeps ROI conservative.
+    center_x, center_y = cx * scale_x, cy * scale_y
+    radius_original = radius * (scale_x + scale_y) / 2
+    result = (center_x, center_y, radius_original, threshold, coverage)
+    return result, "estimated_not_verified"
 
 def _sample_circle(cx: float, cy: float, r: float, count: int = 360) -> np.ndarray:
     ang = np.linspace(0.0, 2.0 * np.pi, count, endpoint=False)
     return np.column_stack((cx + r * np.cos(ang), cy + r * np.sin(ang)))
-
 
 def _ring_gradient_values(gradient: np.ndarray, cx: float, cy: float, r: float) -> np.ndarray:
     """Sample a thin radial band so a 1-2 px Hough radius offset is tolerated."""
@@ -27,7 +57,6 @@ def _ring_gradient_values(gradient: np.ndarray, cx: float, cy: float, r: float) 
         ys = np.clip(np.rint(pts[:, 1]).astype(int), 0, h - 1)
         vals.append(gradient[ys, xs])
     return np.max(np.stack(vals, axis=1), axis=1)
-
 
 def _score_circle(gray: np.ndarray, gradient: np.ndarray, circle, valid_rect):
     cx, cy, r = map(float, circle)
@@ -94,7 +123,6 @@ def _score_circle(gray: np.ndarray, gradient: np.ndarray, circle, valid_rect):
         center_penalty=center_penalty,
         border_penalty=border_penalty,
     )
-
 
 def estimate_plate_hough(image: Image.Image, canvas_size: int = 600, return_debug: bool = False):
     """Return (cx, cy, radius, param2) in EXIF-upright original coordinates.
@@ -195,3 +223,56 @@ def estimate_plate_hough(image: Image.Image, canvas_size: int = 600, return_debu
         chosen["param2"],
     )
     return (result, debug) if return_debug else result
+
+def locate_plate(image: Image.Image):
+    """Image-only dish circle.
+
+    Prefer the scored Hough rim fit adapted from AST-MEASURE. The older
+    threshold estimate remains a fallback only.
+    """
+    circle = estimate_plate_hough(image)
+    if circle is not None:
+        cx, cy, radius = [float(v) for v in circle[:3]]
+        method = "hough_scored_ast_style"
+    else:
+        circle, status = estimate_plate(image)
+        if circle is None:
+            return None, "roi_not_found"
+        cx, cy, radius = [float(v) for v in circle[:3]]
+        method = "threshold_fallback_unverified"
+    w, h = image.size
+    if (not all(math.isfinite(x) for x in (cx, cy, radius))
+        or not 0 <= cx <= w or not 0 <= cy <= h
+        or radius < min(w, h)*0.20 or radius > min(w, h)*0.65):
+        return None, "roi_geometry_rejected"
+    return (cx, cy, radius), method
+
+def crop_plate(image: Image.Image, circle: tuple[float, float, float], padding: float = 1.06):
+    cx, cy, r = circle
+    r *= padding
+    x0 = max(0, int(math.floor(cx-r)))
+    y0 = max(0, int(math.floor(cy-r)))
+    x1 = min(image.width, int(math.ceil(cx+r)))
+    y1 = min(image.height, int(math.ceil(cy+r)))
+    if x1 <= x0 or y1 <= y0:
+        raise ValueError("Invalid plate crop")
+    return image.crop((x0, y0, x1, y1)), (x0, y0)
+
+def clahe_luma(image: Image.Image, clip: float, grid: int, gamma: float, glare_clip: int):
+    """Conservative L-channel enhancement: no inpainting or object fabrication."""
+    array = np.asarray(image.convert("RGB"), dtype=np.uint8)
+    lab = cv2.cvtColor(array, cv2.COLOR_RGB2LAB)
+    light = lab[:, :, 0]
+    if clip > 0:
+        light = cv2.createCLAHE(clipLimit=clip, tileGridSize=(grid, grid)).apply(light)
+    if gamma != 1.0:
+        # gamma>1 brightens dark pixels; gamma<1 darkens them.
+        lut = np.rint(255.0 * (np.arange(256) / 255.0) ** (1.0 / gamma)).astype(np.uint8)
+        light = cv2.LUT(light, lut)
+    if glare_clip < 255:
+        # Optional upper-L compression, deliberately disabled by default:
+        # bright white colonies can be genuine colonies, not glare.
+        high = np.maximum(0, light.astype(np.int16) - glare_clip)
+        light = np.uint8(np.clip(light.astype(np.int16) - high // 2, 0, 255))
+    lab[:, :, 0] = light
+    return Image.fromarray(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB))

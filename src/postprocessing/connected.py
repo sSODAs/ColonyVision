@@ -21,8 +21,8 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-import lobe_graph_resolver as lobe
-import colony_evidence as base
+from postprocessing import touching as lobe
+from postprocessing import evidence as base
 
 
 @dataclass

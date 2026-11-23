@@ -22,7 +22,7 @@ from collections import deque
 import cv2
 import numpy as np
 
-import colony_evidence as base
+from postprocessing import evidence as base
 
 
 @dataclass
