@@ -1,21 +1,21 @@
 # ColonyVision
 
-Final Computer Vision pipeline for detecting and counting bacterial colonies on Petri-dish photographs.
+Computer Vision pipeline for detecting and counting bacterial colonies on Petri-dish photographs.
 
-This repository is intentionally reduced to the **final inference/evaluation system**. Development-only ADBC datasets, teacher-model tools, pseudo-label datasets, diagnostics, and historical experiment outputs are removed.
+This repository is intentionally reduced to the **current inference/evaluation system**. Development-only ADBC datasets, teacher-model tools, pseudo-label datasets, diagnostics, and historical experiment outputs are removed.
 
 ## What is included
 
-- Final ColonyVision source code.
-- Final student model checkpoint.
+- ColonyVision source code.
+- Student model checkpoint.
 - Frozen Test50 set: **50 photographs + manual point Ground Truth**.
-- Final pipeline configuration.
+- Pipeline configuration.
 - Reproducible Test50 evaluation runner.
 - Git safety checks.
 
 Large binary files (the student weight and Test50 photographs) use **Git LFS**.
 
-## Final pipeline
+## Pipeline
 
 1. Detect Petri-dish geometry.
 2. Show the crop boundary and crop the dish.
@@ -43,7 +43,7 @@ Final aggregate: **TP 3,450 / FP 104 / FN 200** on 3,650 GT colonies inside the 
 ```text
 ColonyVision/
 ├─ config/
-│  └─ final_pipeline.json
+│  └─ config.json
 ├─ evaluation/
 │  └─ test50/
 │     ├─ selection.csv
@@ -57,7 +57,7 @@ ColonyVision/
 │  ├─ run_test50.py
 │  └─ check_git_payload.py
 ├─ src/
-│  ├─ final_pipeline.py
+│  ├─ pipeline.py
 │  ├─ predict_tiled.py
 │  ├─ prepare_plate_images.py
 │  ├─ colony_evidence.py
@@ -69,11 +69,12 @@ ColonyVision/
 ├─ weights/
 │  └─ colonyvision_student_v1.pt  # Git LFS
 ├─ output/                         # generated locally; ignored by Git
+├─ run.py
 ├─ requirements.txt
 └─ README.md
 ```
 
-The large historical `resolve_e3.py` module was removed. The small subset of image-evidence functions still required by the final pipeline now lives in `src/colony_evidence.py`.
+The large historical `resolve_e3.py` module was removed. The small subset of image-evidence functions still required by the current pipeline now lives in `src/colony_evidence.py`.
 
 ## Setup
 
@@ -98,7 +99,7 @@ The repository already contains the 50 frozen Test50 photographs under `raw/test
 Run:
 
 ```powershell
-.\.venv\Scripts\python.exe .\scripts\run_test50.py
+python run.py
 ```
 
 Results are generated locally in:

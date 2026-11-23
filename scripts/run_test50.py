@@ -16,14 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 
-import final_pipeline as ev
+import pipeline as ev
 import predict_tiled as pt
 from prepare_plate_images import crop_plate, clahe_luma
 
 GT_DIR = ROOT / "evaluation" / "test50"
 SELECTION = GT_DIR / "selection.csv"
 GT_POINTS = GT_DIR / "ground_truth_points.csv"
-DEV_CFG = ROOT / "config" / "final_pipeline.json"
+DEV_CFG = ROOT / "config" / "config.json"
 MODEL = ROOT / "weights" / "colonyvision_student_v1.pt"
 
 DEFAULT_OUT = ROOT / "output" / "Test50_Final"
