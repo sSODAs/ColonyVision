@@ -1,10 +1,9 @@
 # ColonyVision
+<img src="images/cover.png" width="900">
 
-<img src="images/preview.jpg" width="900" alt="ColonyVision: original Petri-dish photograph and final colony detection">
+**ColonyVision** is a computer vision project for detecting and counting bacterial colonies in Petri-dish images. It combines a fine-tuned YOLO11n model with image preprocessing and post-processing techniques to reduce duplicate detections and improve colony counting, particularly for small and closely spaced colonies.
 
-**ColonyVision** is a Computer Vision project for detecting and counting bacterial colonies in Petri-dish photographs using **YOLO11n and image processing**.
-
-This project was developed for a university Computer Vision course. It combines deep learning with classical image processing to reduce duplicate detections and improve colony counting, particularly when colonies are small, close together, or difficult to separate.
+The project was developed as part of a university Computer Vision course, focusing on practical challenges in automated colony detection and counting.
 
 ## Overview
 
@@ -19,6 +18,8 @@ Rather than counting YOLO detections directly, ColonyVision applies multiple ref
 - Re-checks nested detections and displays the final boxes and colony count.
 
 The final result displays green rectangular bounding boxes, numbered tags, and a colony count. Counts greater than 300 also show a **TNTC** display indicator; this is not a validated laboratory determination.
+
+<img src="images/preview.jpg" width="900" alt="ColonyVision: original Petri-dish photograph and final colony detection">
 
 ## How It Works
 
