@@ -1,14 +1,13 @@
-# ColonyVision: share source code and reproducible configuration only.
-# All original photographs, external datasets, trained/downloaded models,
-# checkpoint files and generated outputs must stay on this computer.
+# ColonyVision final repository policy
 
-# ----- PRIVATE DATA / DERIVED DATA -----
-/raw/
+# Local/private datasets and generated results
+# raw/test50 is the only raw-image subset published for reproducible testing.
+/raw/*
+!/raw/test50/
+/dataset/
 /annotations/
-/dataset/*
-!/dataset/data.yaml
+/output/
 /outputs/
-/weights/
 /runs/
 /results/
 /predictions/
@@ -17,7 +16,42 @@
 /data/
 /datasets/
 
-# ----- MODEL WEIGHTS / EXPORTS / LARGE SERIALIZED DATA -----
+# Local environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.tox/
+.nox/
+.cache/
+.uv/
+build/
+dist/
+*.log
+*.tmp
+*.part
+
+# Machine-specific settings / secrets
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Model weights: only the final student checkpoint is publishable.
 *.pt
 *.pth
 *.ptl
@@ -43,7 +77,11 @@
 *.gguf
 *.model
 
-# ----- IMAGE / VIDEO / AUDIO / DATASETS / ARCHIVES -----
+!/weights/
+/weights/*
+!/weights/colonyvision_student_v1.pt
+
+# Binary media / archives remain local.
 *.jpg
 *.jpeg
 *.png
@@ -59,14 +97,6 @@
 *.mkv
 *.wav
 *.mp3
-*.csv
-*.tsv
-*.parquet
-*.feather
-*.arrow
-*.sqlite
-*.sqlite3
-*.db
 *.zip
 *.7z
 *.rar
@@ -74,37 +104,23 @@
 *.gz
 *.zst
 
-# ----- PYTHON / TOOL CACHE -----
-.venv/
-venv/
-env/
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.ipynb_checkpoints/
-.tox/
-.nox/
-.cache/
-.uv/
-build/
-dist/
-*.log
-*.tmp
-*.part
+# CSV is blocked by default; only frozen Test50 metadata is publishable.
+*.csv
+!/evaluation/
+!/evaluation/test50/
+!/evaluation/test50/selection.csv
+!/evaluation/test50/ground_truth_points.csv
+!/evaluation/test50/ground_truth_summary.csv
+!/evaluation/test50/reference_metrics.csv
 
-# ----- SECRETS / LOCAL MACHINE SETTINGS -----
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-id_rsa
-id_ed25519
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-desktop.ini
+# Re-allow the exact frozen Test50 images after the global media rules above.
+!/raw/test50/*
+
+# Other large/local data formats
+*.tsv
+*.parquet
+*.feather
+*.arrow
+*.sqlite
+*.sqlite3
+*.db

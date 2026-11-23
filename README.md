@@ -1,159 +1,150 @@
-# ColonyVision — Automated Petri Dish Colony Detection & Counting
+# ColonyVision
 
-**Phase 1 scope:** identify colony positions on petri-dish photographs and count all visible colonies as ONE generic class (`colony`). Species recognition is not part of this baseline.
+Final Computer Vision pipeline for detecting and counting bacterial colonies on Petri-dish photographs.
 
-## Input images
+This repository is intentionally reduced to the **final inference/evaluation system**. Development-only ADBC datasets, teacher-model tools, pseudo-label datasets, diagnostics, and historical experiment outputs are removed.
 
-- 1,252 original images: `raw/unlabeled/Petri_plates/`, **unaltered and not used for training** because they lack reviewed per-colony bounding boxes.
-- Capture variations, background, glare, colony size and crowding can cause domain shift between training and these photographs.
-- The count-like number in a source filename is **not independently verified** and might be capped.
-- Dish localization baseline: `src/preprocessing/plate_roi.py`; that tool creates estimates/previews, not confirmed plate geometry.
+## What is included
 
-## Training data — ADBC (not a pretrained model)
+- Final ColonyVision source code.
+- Final student model checkpoint.
+- Frozen Test50 set: **50 photographs + manual point Ground Truth**.
+- Final pipeline configuration.
+- Reproducible Test50 evaluation runner.
+- Git safety checks.
 
-The external training set is **Annotated dataset for deep-learning-based bacterial colony detection**:
-https://doi.org/10.6084/m9.figshare.22022540.v3 (Figshare, CC BY 4.0; attribution required).
+Large binary files (the student weight and Test50 photographs) use **Git LFS**.
 
-Official release: **369 photos, 24 class IDs, 56,865 source YOLO boxes.**
-Three official boxes have zero height; the preparation script warns and excludes
-those three invalid entries. Original Figshare images and labels remain unchanged
-under `raw/external/ADBC/`.
+## Final pipeline
 
-`src/dataset/prepare_adbc.py`:
-- Fetches official images/labels and checks size + MD5 against Figshare metadata.
-- Applies EXIF orientation correction to displayed images before interpreting YOLO coordinates.
-- Converts every original species class to class `0 colony`.
-- Crops into **768×768 image tiles**, stride **640**, with aligned clipped per-tile labels.
-- Assigns **all photographs from the same species group to the same split** to avoid data leakage; this is an intentionally challenging cross-species evaluation split.
-- Creates separate `dataset/adbc_pilot/` and `dataset/adbc_full/` with YOLO `data.yaml`, train/val/test images and labels, and a source manifest.
+1. Detect Petri-dish geometry.
+2. Show the crop boundary and crop the dish.
+3. Define the orange counting ROI.
+4. Run tiled YOLO inference on original and CLAHE-enhanced views.
+5. Refine/filter candidate detections.
+6. Resolve touching colonies with lobe-graph evidence.
+7. Apply seeded-connected colony resolution.
+8. Run a conservative iterative parent/child nested-box re-check.
+9. Render the final cropped plate with rectangular colony boxes and small numbered AST-style tags.
+10. Calculate Test50 metrics from manual point annotations.
 
-A checkpoint trained on ADBC is **our own YOLO11n fine-tune**, not an ADBC-provided model.
+## Final Test50 result
 
-## Commands (Windows PowerShell)
+| Method | Precision | Recall | F1 | Count MAE |
+|---|---:|---:|---:|---:|
+| YOLO baseline | 80.00% | 95.53% | 87.08% | 14.18 |
+| Refined | 92.73% | 96.08% | 94.38% | 3.80 |
+| **Final iterative-resolved** | **97.07%** | **94.52%** | **95.78%** | **3.00** |
 
-Run these from `C:\Users\user\Desktop\ColonyVision`.
+Final aggregate: **TP 3,450 / FP 104 / FN 200** on 3,650 GT colonies inside the evaluation ROI.
 
-```powershell
-# Optional: regenerate a small 24-photo preparation/smoke test
-.\.venv\Scripts\python.exe src\dataset\prepare_adbc.py --name adbc_pilot --max-per-species 1
+## Repository structure
 
-# Full labeled training set: 369 official images
-.\.venv\Scripts\python.exe src\dataset\prepare_adbc.py --name adbc_full --max-per-species 0
-
-# GPU training on RTX 3050 (4 GB); ADBC labels only
-.\.venv\Scripts\python.exe src\train.py --data dataset\adbc_full\data.yaml --model yolo11n.pt --epochs 40 --imgsz 640 --batch 2 --name adbc_yolo11n
-
-# Counting previews on 12 original private photographs using tiled inference + NMS
-.\.venv\Scripts\python.exe src\predict_tiled.py --model outputs\train\adbc_yolo11n\weights\best.pt --limit 12
-
-# If results are sufficiently plausible, run prediction for all input photos
-.\.venv\Scripts\python.exe src\predict_tiled.py --model outputs\train\adbc_yolo11n\weights\best.pt --limit 0
+```text
+ColonyVision/
+├─ config/
+│  └─ final_pipeline.json
+├─ evaluation/
+│  └─ test50/
+│     ├─ selection.csv
+│     ├─ ground_truth_points.csv
+│     ├─ ground_truth_summary.csv
+│     ├─ reference_metrics.csv
+│     └─ README.md
+├─ raw/
+│  └─ test50/                     # exactly 50 frozen test photographs (Git LFS)
+├─ scripts/
+│  ├─ run_test50.py
+│  └─ check_git_payload.py
+├─ src/
+│  ├─ final_pipeline.py
+│  ├─ predict_tiled.py
+│  ├─ prepare_plate_images.py
+│  ├─ colony_evidence.py
+│  ├─ lobe_graph_resolver.py
+│  ├─ seeded_connected_resolver.py
+│  └─ preprocessing/
+│     ├─ plate_hough.py
+│     └─ plate_roi.py
+├─ weights/
+│  └─ colonyvision_student_v1.pt  # Git LFS
+├─ output/                         # generated locally; ignored by Git
+├─ requirements.txt
+└─ README.md
 ```
 
-**Note:** ADBC full training is a nontrivial GPU run and takes substantially longer than the 1-epoch pilot check; do not interpret a smoke-test checkpoint as an accurate finished model.
+The large historical `resolve_e3.py` module was removed. The small subset of image-evidence functions still required by the final pipeline now lives in `src/colony_evidence.py`.
 
-Tiled inference outputs `outputs/predict/adbc_tiled_preview/` with:
-- `counts.csv` — image and predicted count (not ground truth)
-- `overlays/*_marked.jpg` — boxes drawn on EXIF-upright images
-- `detections/*.json` — each predicted bounding box and its confidence
+## Setup
 
-## How to assess accuracy
-
-- Use ADBC held-out labels to report precision, recall and mAP, with the actual training split specified.
-- For **real ColonyVision photographs**, evaluate against independent reviewed counts/boxes from a sample of physical plates before making accuracy or CFU measurement claims.
-- Because tiles overlap, cross-tile NMS is required at inference to reduce double-counting.
-- No source-photo filename token or pseudo-label is treated as independent ground truth.
-
-## Project hygiene
-
-- Original photos, external data, generated labels, checkpoints and predictions are ignored by Git.
-- WeCFU was removed from the project, its stand-alone Desktop installation and its downloaded runtime. No WeCFU predictions are included in the ADBC training pipeline.
-- See `raw/external/ADBC/source_metadata.json` and `dataset/adbc_full/SOURCE_AND_LICENSE.txt` for provenance.
-
-## Experimental Circular ROI training (2026-11-18)
-
-**Keep the in-progress ADBC baseline training intact.** Do not modify its tiles
-(`dataset/adbc_full`) or restart its active training process.
-
-Rationale: only plate interior should influence colony detection; avoid shadows,
-glare, background and table objects outside the Petri dish.
-
-- ADBC image-only ROI research audit:
-  `src/dataset/audit_circular_roi.py` checks 369 images and reports to
-  `outputs/roi_circle_audit/audit.csv`.
-  The old brightness-threshold estimator returned a circle for 154/369 images.
-  OpenCV Hough returned circles for 369/369 images **as hypotheses**, not
-  manually verified geometries. At radius 1.02 times Hough radius,
-  60/56,865 official annotation centers were outside on 6 source images.
-- New `src/preprocessing/plate_hough.py` estimates candidate circles with
-  OpenCV Hough on image pixels alone. It is tested on ADBC images, **not yet
-  reliable on all 1,252 user images**; one real phone photo did not yield a circle.
-- `src/dataset/build_adbc_circular.py` generates **new training tiles only**
-  into `dataset/adbc_circular/` without changing the baseline. It masks the
-  exterior of confidently estimated circles to black with a 3.5% radial
-  safety margin; image and label coordinates remain unchanged. If the circle
-  cannot be found or could cover any official GT box corner, that training
-  image remains unmasked, and its fallback reason is recorded in
-  `roi_audit.csv`. This avoids silently deleting true annotated colonies.
-  The Validation and Test paths continue to use the same **unmodified**
-  ADBC baseline data for fair cross-run comparison.
-- The current prediction script `src/predict_tiled.py` can use
-  `--circular-mask --strict-roi` to mask the exterior before YOLO, and skip
-  instead of reporting count=0 if plate localization fails. Its real-photo
-  plate estimator still uses the previous brightness-based algorithm,
-  which must be evaluated separately.
-
-Commands for a **separate experimental run after baseline finishes**:
+Python 3.11 is recommended.
 
 ```powershell
-cd "C:\Users\user\Desktop\ColonyVision"
+git clone https://github.com/sSODAs/ColonyVision.git
+cd ColonyVision
 
-# Prepare circular ROI training data (separate dataset, safe to regenerate under a new name)
-.\.venv\Scripts\python.exe src\dataset\build_adbc_circular.py --name adbc_circular
+git lfs install
+git lfs pull
 
-# Compare to the same validation and test splits (run separately from existing training)
-.\.venv\Scripts\python.exe src\train.py --data dataset\adbc_circular\data.yaml --epochs 40 --imgsz 640 --batch 2 --name adbc_yolo11n_roi
-
-# Infer using ROI mask; preview 12 images, never promotes predictions to ground truth
-.\.venv\Scripts\python.exe src\predict_tiled.py --model outputs\train\adbc_yolo11n_roi\weights\best.pt --circular-mask --strict-roi --limit 12 --name adbc_roi_preview
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-Note: The ROI experiment may increase or decrease accuracy. Compare Precision,
-Recall, mAP and actual counting error on fixed, independently annotated test
-images before treating the hypothesis as successful. Inference localization
-for real patient/user photos remains to be independently verified.
+## Run Test50
 
-## GitHub upload policy — code and configuration only
+The repository already contains the 50 frozen Test50 photographs under `raw/test50/`.
 
-The Git repository is configured to **exclude all private/raw images,
-downloaded ADBC data, generated YOLO labels/tiles, annotations, Python
-virtual environments, all downloaded pretrained model files, trained weights,
-checkpoints, and training/inference outputs**. These files remain on the
-local computer and are **not** removed by `.gitignore`.
-
-Publishable files include source code (`src/`), this README, scripts,
-Git hooks, and the one-class YOLO template `dataset/data.yaml`.
-
-Security controls:
-- `.gitignore` automatically ignores data, model artifacts, and secrets.
-- `scripts/check_git_payload.py` audits tracked/staged paths, historical
-  commit paths, and oversized blobs.
-- Local hooks `.githooks/pre-commit` and `.githooks/pre-push` refuse
-  unsafe uploads (including accidental `git add -f`).
-- Git hooks are enabled on this computer through
-  `git config --local core.hooksPath .githooks`. In a **new clone**,
-  explicitly run the same command again, as Git does not enable
-  repository-provided hooks automatically.
-
-Check the file list before publishing:
+Run:
 
 ```powershell
-cd "C:\Users\user\Desktop\ColonyVision"
-.\.venv\Scripts\python.exe scripts\check_git_payload.py
-git ls-files
-git status --short
+.\.venv\Scripts\python.exe .\scripts\run_test50.py
 ```
 
-There is no GitHub remote configured yet; these settings alone do not
-upload anything to GitHub. Keep future model weights and training datasets
-outside the repository history even when exporting to new filenames.
+Results are generated locally in:
+
+```text
+output/Test50_Final/
+```
+
+Each `Txxx` folder contains:
+
+- `Txxx_01_final_result.jpg` — cropped dish, orange ROI, rectangular detections, small numbered black tags.
+- `Txxx_02_steps.jpg` — AST-style white-background step-by-step pipeline sheet.
+- `Txxx_03_pipeline_graph.png` — detection counts across pipeline stages.
+- `Txxx_04_measured.json` — final colony coordinates and count.
+- `Txxx_debug/` — individual stage images.
+
+The generated `output/` directory is intentionally **not uploaded to GitHub**.
+
+## Test50 annotations
+
+`evaluation/test50/ground_truth_points.csv` contains the manually clicked point Ground Truth.
+
+`evaluation/test50/selection.csv` maps T001–T050 to the 50 photographs stored in `raw/test50/`.
+
+## Git policy
+
+Published:
+
+- final source code,
+- final configuration,
+- Test50 metadata/annotations,
+- exactly 50 Test50 photographs through Git LFS,
+- final student model through Git LFS.
+
+Not published:
+
+- generated `output/`,
+- the remaining private/raw development photographs,
+- ADBC training data,
+- teacher model/checkpoints,
+- pseudo-label datasets,
+- diagnostics and historical experiments,
+- local virtual environments and caches.
+
+Audit before commit/push:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\check_git_payload.py
+```

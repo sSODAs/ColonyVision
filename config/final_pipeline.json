@@ -1,0 +1,13 @@
+﻿{
+  "tile": 768,
+  "stride": 640,
+  "imgsz": 640,
+  "confidence": 0.25,
+  "global_nms_iou": 0.6,
+  "lab_clahe_clip": 2.0,
+  "clahe_grid": 8,
+  "gamma": 1.0,
+  "glare_clip": 255,
+  "roi_ratio": 0.93,
+  "crop_padding": 1.06
+}

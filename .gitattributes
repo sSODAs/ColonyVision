@@ -1,3 +1,6 @@
-# Git for Windows: shell hooks must use LF to work after a fresh clone.
+﻿# Git for Windows: hooks and attributes use LF.
 .githooks/* text eol=lf
 .gitattributes text eol=lf
+# Reproducibility binaries: final student model + frozen Test50 photographs.
+weights/colonyvision_student_v1.pt filter=lfs diff=lfs merge=lfs -text
+raw/test50/* filter=lfs diff=lfs merge=lfs -text
