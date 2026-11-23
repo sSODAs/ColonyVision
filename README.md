@@ -1,5 +1,5 @@
 # ColonyVision
-<img src="images/cover.png" width="900">
+<img src="images/cover new.png" width="900">
 
 **ColonyVision** is a computer vision project for detecting and counting bacterial colonies in Petri-dish images. It combines a fine-tuned YOLO11n model with image preprocessing and post-processing techniques to reduce duplicate detections and improve colony counting, particularly for small and closely spaced colonies.
 
