@@ -53,9 +53,6 @@ ColonyVision/
 │     └─ README.md
 ├─ raw/
 │  └─ test50/                     # exactly 50 frozen test photographs (Git LFS)
-├─ scripts/
-│  ├─ run_test50.py
-│  └─ check_git_payload.py
 ├─ src/
 │  ├─ pipeline.py
 │  ├─ predict_tiled.py
@@ -147,5 +144,5 @@ Not published:
 Audit before commit/push:
 
 ```powershell
-.\.venv\Scripts\python.exe .\scripts\check_git_payload.py
+python .githooks/check_git_payload.py
 ```
