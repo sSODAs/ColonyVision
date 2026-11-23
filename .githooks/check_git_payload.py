@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 ALLOWED_MODEL = "weights/colonyvision_student_v1.pt"
+ALLOWED_README_PREVIEW = "images/preview.jpg"
 TEST50_RAW_PREFIX = "raw/test50/"
 EXPECTED_TEST50_IMAGES = 50
 
@@ -120,8 +121,8 @@ def prohibited(path: str) -> str | None:
     if suffix in MODEL_SUFFIXES and low != ALLOWED_MODEL:
         return "model/checkpoint other than final student weight"
 
-    if suffix in IMAGE_SUFFIXES and not is_test50_image(low):
-        return "image outside frozen Test50"
+    if suffix in IMAGE_SUFFIXES and not (is_test50_image(low) or low == ALLOWED_README_PREVIEW):
+        return "image outside frozen Test50 or the single README preview"
 
     if suffix in OTHER_MEDIA_SUFFIXES:
         return "binary media/archive"

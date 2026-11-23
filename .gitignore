@@ -120,6 +120,11 @@ id_ed25519
 # Re-allow the exact frozen Test50 images after the global media rules above.
 !/raw/test50/*
 
+# One vetted, lightweight preview for the public README (not generated output folders).
+!/images/
+/images/*
+!/images/preview.jpg
+
 # Other large/local data formats
 *.tsv
 *.parquet
