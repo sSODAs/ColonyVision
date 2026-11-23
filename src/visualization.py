@@ -96,8 +96,8 @@ def draw_colonies(
     if roi_circle is not None:
         draw_roi_ring(draw, shift_circle(roi_circle, ox, oy), "#f5a623", 6)
 
-    # Compact AST-style tag: black box + readable green sequence number.
-    label_size = max(34, min(46, int(min(out.width, out.height) * 0.014)))
+    # Square-corner black number tag above each green detection box.
+    label_size = max(30, min(44, int(min(out.width, out.height) * 0.014)))
     font_label = ui_bold_font(label_size)
     for idx, item in enumerate(boxes, 1):
         box = item["box"] if isinstance(item, dict) else item
@@ -111,25 +111,25 @@ def draw_colonies(
             tb = draw.textbbox((0, 0), label, font=font_label)
             tw = tb[2] - tb[0]
             th = tb[3] - tb[1]
-            pad_x, pad_y = 6, 3
-            label_gap = max(10, int(label_size * 0.35))
+            pad_x, pad_y = 7, 6
+            label_gap = max(4, int(label_size * 0.12))
+            tag_w = tw + 2 * pad_x
+            tag_h = th + 2 * pad_y
 
-            bx1 = x1 - 4
-            by1 = y1 - th - 2 * pad_y - label_gap
-            bx1 = max(0, min(out.width - (tw + 2 * pad_x), bx1))
+            # Align to the detection's left edge, but leave a visible gap.
+            bx1 = max(0, min(out.width - tag_w, x1))
+            by1 = y1 - tag_h - label_gap
             if by1 < 0:
-                by1 = min(
-                    out.height - (th + 2 * pad_y),
-                    y2 + label_gap,
-                )
-            bx2 = bx1 + tw + 2 * pad_x
-            by2 = by1 + th + 2 * pad_y
+                by1 = y2 + label_gap
+            by1 = max(0, min(out.height - tag_h, by1))
+            bx2, by2 = bx1 + tag_w, by1 + tag_h
 
+            # Sharp corners, black background, centered white digit(s).
             draw.rectangle((bx1, by1, bx2, by2), fill="black")
             draw.text(
-                (bx1 + pad_x, by1 + pad_y),
+                (bx1 + pad_x - tb[0], by1 + pad_y - tb[1]),
                 label,
-                fill=accepted_color,
+                fill="white",
                 font=font_label,
             )
 
@@ -140,20 +140,34 @@ def draw_colonies(
 
     return out
 
-def draw_final_count(im: Image.Image, count: int, color="#17c964"):
+def draw_final_count(im: Image.Image, count: int):
     out = im.copy().convert("RGB")
     draw = ImageDraw.Draw(out)
+
     font_size = max(34, min(52, int(min(out.width, out.height) * 0.016)))
     font = ui_bold_font(font_size)
-    text = f"Colonies: {count}"
-    x, y = 18, 16
+
+    suffix = " (TNTC)" if int(count) > 300 else ""
+    text = f"Colony Count: {int(count)}{suffix}"
+
+    # Leave room between the badge and image edges, and around its text.
+    edge_margin = max(26, int(min(out.width, out.height) * 0.018))
+    x, y = edge_margin, edge_margin
+    pad_x, pad_y = 22, 14
+    tb = draw.textbbox((0, 0), text, font=font)
+    tw = tb[2] - tb[0]
+    th = tb[3] - tb[1]
+
+    # Square red count badge without a black border.
+    draw.rectangle(
+        (x, y, x + tw + 2 * pad_x, y + th + 2 * pad_y),
+        fill="#c80000",
+    )
     draw.text(
-        (x, y),
+        (x + pad_x - tb[0], y + pad_y - tb[1]),
         text,
         font=font,
-        fill=color,
-        stroke_width=3,
-        stroke_fill="black",
+        fill="white",
     )
     return out
 

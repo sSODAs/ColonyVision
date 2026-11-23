@@ -379,7 +379,7 @@ def write_json(path: Path, data):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run ColonyVision Test50 and save AST-style per-plate output."
+        description="Run ColonyVision Test50 evaluation."
     )
     parser.add_argument("--limit", type=int, default=50)
     parser.add_argument(
@@ -435,7 +435,7 @@ def main():
     summary_rows = []
 
     print("=" * 72)
-    print("ColonyVision Test50 | AST-style output")
+    print("ColonyVision")
     print("Output:", out_root)
     print("=" * 72)
 

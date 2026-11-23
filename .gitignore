@@ -1,5 +1,9 @@
 # ColonyVision final repository policy
 
+# Temporary Google Colab runtime and notebooks (local only)
+/colab_demo/
+*.ipynb
+
 # Local/private datasets and generated results
 # raw/test50 is the only raw-image subset published for reproducible testing.
 /raw/*
