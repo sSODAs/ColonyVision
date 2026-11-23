@@ -73,14 +73,13 @@ Settings are defined in `config/config.json`. The plate boundary is estimated fr
 
 ## Dataset and Model Training
 
-The original development collection contained **1,252 Petri-dish images**:
+The original development collection contained **1,200 Petri-dish images**:
 
 | Split | Images | Purpose |
 |---|---:|---|
 | Train | 900 | YOLO11n Student training |
 | Validation | 100 | Model validation |
 | Test | 200 | Held-out image evaluation pool |
-| Reserve | 52 | Additional images |
 
 The photographs initially lacked complete human-verified bounding-box labels. A previously developed **ADBC-based Teacher detector** was used to propose **pseudo-label bounding boxes**. After filtering and image tiling, those pseudo-labels were used to fine-tune a pretrained **YOLO11n Student** model for one class: `colony`.
 
